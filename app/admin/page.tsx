@@ -120,7 +120,7 @@ export default function AdminDashboard() {
                             type="text"
                             placeholder="Slug Único (ej. cancha-1)"
                             value={newRoundSlug}
-                            onChange={(e) => setNewRoundSlug(e.target.value)}
+                            onChange={(e) => setNewRoundSlug(e.target.value.replace(/\s+/g, '-').toLowerCase())}
                             pattern="^[a-z0-9-]+$"
                             title="Solo letras minúsculas, números y guiones"
                             required

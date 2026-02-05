@@ -4,9 +4,11 @@
   --color-bg: #0f172a;
   --color-surface: #1e293b;
   --color-surface-hover: #334155;
-  --color-primary: #3b82f6; /* Electric Blue */
+  --color-primary: #3b82f6;
+  /* Electric Blue */
   --color-primary-glow: rgba(59, 130, 246, 0.5);
-  --color-accent: #f472b6; /* Pink */
+  --color-accent: #f472b6;
+  /* Pink */
   --color-text: #f8fafc;
   --color-text-dim: #94a3b8;
   --radius-lg: 16px;
@@ -54,6 +56,7 @@ h1 {
   text-align: center;
   margin-bottom: 40px;
   background: linear-gradient(135deg, var(--color-text) 0%, var(--color-primary) 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.05em;
@@ -129,7 +132,7 @@ input::placeholder {
 
 /* Table Styles */
 .table-wrapper {
-  overflow: hidden;
+  overflow-x: auto;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -182,14 +185,22 @@ input::placeholder {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 640px) {
   .player-form {
     grid-template-columns: 1fr;
   }
+
   .submit-btn {
     padding: 14px;
   }
