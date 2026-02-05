@@ -266,9 +266,37 @@ function RoundMatches({ slug }: { slug: string }) {
         return acc;
     }, {}) : {};
 
+    // Calculate total score for each round to validate they are equal
+    const roundScores: Record<string, number> = {};
+    Object.keys(matchesByRound).forEach(r => {
+        roundScores[r] = matchesByRound[r].reduce((sum: number, m: any) => sum + (m.score1 || 0) + (m.score2 || 0), 0);
+    });
+
+    const uniqueScores = Array.from(new Set(Object.values(roundScores)));
+    const showWarning = uniqueScores.length > 1;
+
     return (
         <div style={{ width: '100%', marginTop: '10px', minWidth: '300px' }}>
             <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Partidos:</p>
+
+            {showWarning && (
+                <div style={{
+                    backgroundColor: '#fff7ed',
+                    border: '1px solid #fed7aa',
+                    color: '#c2410c',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    marginBottom: '10px',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                }}>
+                    <span>⚠️</span>
+                    <strong>Atención:</strong> Suma de juegos desigual entre rondas.
+                </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {Object.keys(matchesByRound).sort((a, b) => Number(a) - Number(b)).map((roundNum) => (
                     <div key={roundNum}>
