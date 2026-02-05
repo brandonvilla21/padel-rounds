@@ -11,15 +11,22 @@ interface Player {
     player2: string;
 }
 
-export default function PadelBoard() {
+interface PadelBoardProps {
+    slug?: string;
+    roundName?: string;
+}
+
+export default function PadelBoard({ slug, roundName }: PadelBoardProps) {
     const [player1, setPlayer1] = useState('');
     const [player2, setPlayer2] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Poll every 1000ms (1 second) to ensure near real-time updates for all users
-    const { data: players, error, mutate } = useSWR<Player[]>('/api/players', fetcher, {
-        refreshInterval: 1000,
-    });
+    const { data: players, error, mutate } = useSWR<Player[]>(
+        `/api/players${slug ? `?slug=${slug}` : ''}`,
+        fetcher,
+        { refreshInterval: 1000 }
+    );
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,7 +37,7 @@ export default function PadelBoard() {
             const res = await fetch('/api/players', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ player1, player2 }),
+                body: JSON.stringify({ player1, player2, slug }),
             });
 
             if (res.ok) {
@@ -47,13 +54,13 @@ export default function PadelBoard() {
 
     return (
         <div className="app-container">
-            <h1>Padel Rounds Queue</h1>
+            <h1>{roundName || 'Cola de Padel Rounds'}</h1>
 
             <form className="player-form" onSubmit={handleSubmit}>
                 <div className="input-group">
                     <input
                         type="text"
-                        placeholder="Player 1 Name"
+                        placeholder="Nombre Jugador 1"
                         value={player1}
                         onChange={(e) => setPlayer1(e.target.value)}
                         disabled={isSubmitting}
@@ -63,7 +70,7 @@ export default function PadelBoard() {
                 <div className="input-group">
                     <input
                         type="text"
-                        placeholder="Player 2 Name"
+                        placeholder="Nombre Jugador 2"
                         value={player2}
                         onChange={(e) => setPlayer2(e.target.value)}
                         disabled={isSubmitting}
@@ -71,7 +78,7 @@ export default function PadelBoard() {
                     />
                 </div>
                 <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                    {isSubmitting ? 'Adding...' : 'Join Queue'}
+                    {isSubmitting ? 'Agregando...' : 'Unirse a la Lista'}
                 </button>
             </form>
 
@@ -80,18 +87,18 @@ export default function PadelBoard() {
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Player 1</th>
-                            <th>Player 2</th>
+                            <th>Jugador 1</th>
+                            <th>Jugador 2</th>
                         </tr>
                     </thead>
                     <tbody>
                         {!players ? (
                             <tr>
-                                <td colSpan={3} className="empty-state">Loading court data...</td>
+                                <td colSpan={3} className="empty-state">Cargando datos...</td>
                             </tr>
                         ) : players.length === 0 ? (
                             <tr>
-                                <td colSpan={3} className="empty-state">No players in queue. Be the first!</td>
+                                <td colSpan={3} className="empty-state">No hay jugadores en lista. ¡Sé el primero!</td>
                             </tr>
                         ) : (
                             players.map((match, index) => (

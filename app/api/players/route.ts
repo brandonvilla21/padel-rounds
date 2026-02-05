@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, ensureSchema } from '@/lib/db';
 
-async function ensureTable() {
-    await db.execute(`
-    CREATE TABLE IF NOT EXISTS players (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      player1 TEXT NOT NULL,
-      player2 TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-}
-
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        await ensureTable();
-        const result = await db.execute('SELECT * FROM players ORDER BY id ASC');
+        await ensureSchema();
+        const { searchParams } = new URL(request.url);
+        const slug = searchParams.get('slug');
+
+        let query = 'SELECT * FROM players';
+        const args: any[] = [];
+
+        if (slug) {
+            query += ' WHERE round_slug = ?';
+            args.push(slug);
+        }
+
+        query += ' ORDER BY id ASC';
+
+        const result = await db.execute({ sql: query, args });
         return NextResponse.json(result.rows);
     } catch (error) {
         console.error('Database error:', error);
@@ -25,24 +27,27 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
-        await ensureTable();
+        await ensureSchema();
         const body = await request.json();
-        const { player1, player2 } = body;
+        const { player1, player2, slug } = body;
 
         if (!player1 || !player2) {
             return NextResponse.json({ error: 'Both player names are required' }, { status: 400 });
         }
 
+        // Checking if the round exists is good practice, but for now we might rely on UI
+        // Or we implicitly create it? No, Admin creates rounds. 
+        // If slug is provided, check existence?
+        // Let's assume slug comes from a valid page.
+
         const result = await db.execute({
-            sql: 'INSERT INTO players (player1, player2) VALUES (?, ?)',
-            args: [player1, player2],
+            sql: 'INSERT INTO players (player1, player2, round_slug) VALUES (?, ?, ?)',
+            args: [player1, player2, slug || null], // Handle legacy global players as null slug
         });
 
-        // lastInsertRowid is available in the result.lastInsertRowid for LibSQL
-        // Note: depending on the adapter/client version, it might be string or bigint or number.
         const id = result.lastInsertRowid?.toString();
 
-        return NextResponse.json({ id, player1, player2 }, { status: 201 });
+        return NextResponse.json({ id, player1, player2, round_slug: slug }, { status: 201 });
     } catch (error) {
         console.error('Database error:', error);
         return NextResponse.json({ error: 'Failed to add players' }, { status: 500 });
