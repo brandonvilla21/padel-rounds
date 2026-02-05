@@ -273,7 +273,30 @@ function RoundMatches({ slug }: { slug: string }) {
     });
 
     const uniqueScores = Array.from(new Set(Object.values(roundScores)));
-    const showWarning = uniqueScores.length > 1;
+
+    // Enhanced Validation Logic
+    let showWarning = false;
+    let warningMessage = '';
+
+    if (uniqueScores.length > 1) {
+        showWarning = true;
+        const scores = Object.values(roundScores);
+        const frequency: Record<number, number> = {};
+        let maxFreq = 0;
+        let modeScore = scores[0];
+
+        scores.forEach(s => {
+            frequency[s] = (frequency[s] || 0) + 1;
+            if (frequency[s] > maxFreq) {
+                maxFreq = frequency[s];
+                modeScore = s;
+            }
+        });
+
+        const outlierRounds = Object.keys(roundScores).filter(r => roundScores[r] !== modeScore);
+
+        warningMessage = `Atención: La suma de juegos no es igual en todas las rondas. Parece que el número de juegos habitual es ${modeScore}, pero revisa la(s) ronda(s): ${outlierRounds.join(', ')}.`;
+    }
 
     return (
         <div style={{ width: '100%', marginTop: '10px', minWidth: '300px' }}>
@@ -293,7 +316,7 @@ function RoundMatches({ slug }: { slug: string }) {
                     gap: '6px'
                 }}>
                     <span>⚠️</span>
-                    <strong>Atención:</strong> Suma de juegos desigual entre rondas.
+                    <strong>{warningMessage}</strong>
                 </div>
             )}
 

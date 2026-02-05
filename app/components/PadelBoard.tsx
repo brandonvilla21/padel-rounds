@@ -163,7 +163,30 @@ function MatchesSection({ slug }: { slug?: string }) {
     });
 
     const uniqueScores = Array.from(new Set(Object.values(roundScores)));
-    const showWarning = uniqueScores.length > 1;
+
+    // Enhanced Validation Logic
+    let showWarning = false;
+    let warningMessage = '';
+
+    if (uniqueScores.length > 1) {
+        showWarning = true;
+        const scores = Object.values(roundScores);
+        const frequency: Record<number, number> = {};
+        let maxFreq = 0;
+        let modeScore = scores[0]; // Default to first if tied
+
+        scores.forEach(s => {
+            frequency[s] = (frequency[s] || 0) + 1;
+            if (frequency[s] > maxFreq) {
+                maxFreq = frequency[s];
+                modeScore = s;
+            }
+        });
+
+        const outlierRounds = Object.keys(roundScores).filter(r => roundScores[r] !== modeScore);
+
+        warningMessage = `Atención: La suma de juegos no es igual en todas las rondas. Parece que el número de juegos habitual es ${modeScore}, pero revisa la(s) ronda(s): ${outlierRounds.join(', ')}.`;
+    }
 
     return (
         <div style={{ marginTop: '40px' }}>
@@ -174,18 +197,18 @@ function MatchesSection({ slug }: { slug?: string }) {
 
             {showWarning && (
                 <div style={{
-                    backgroundColor: '#fff7ed', 
-                    border: '1px solid #fed7aa', 
-                    color: '#c2410c', 
-                    padding: '12px', 
-                    borderRadius: '8px', 
+                    backgroundColor: '#fff7ed',
+                    border: '1px solid #fed7aa',
+                    color: '#c2410c',
+                    padding: '12px',
+                    borderRadius: '8px',
                     marginBottom: '20px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
                 }}>
                     <span>⚠️</span>
-                    <strong>Atención:</strong> La suma de juegos no es igual en todas las rondas. Por favor revisa los resultados.
+                    <strong>{warningMessage}</strong>
                 </div>
             )}
 
