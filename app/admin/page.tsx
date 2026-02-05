@@ -12,6 +12,7 @@ export default function AdminDashboard() {
     // Dashboard state
     const [newRoundName, setNewRoundName] = useState('');
     const [newRoundSlug, setNewRoundSlug] = useState('');
+    const [newMaxPairs, setNewMaxPairs] = useState(''); // Empty string for no limit
     const [createMsg, setCreateMsg] = useState('');
 
     const { data: rounds, mutate } = useSWR(isAuthenticated ? '/api/rounds' : null, fetcher);
@@ -35,12 +36,17 @@ export default function AdminDashboard() {
 
         const res = await fetch('/api/rounds', {
             method: 'POST',
-            body: JSON.stringify({ name: newRoundName, slug: newRoundSlug }),
+            body: JSON.stringify({
+                name: newRoundName,
+                slug: newRoundSlug,
+                max_pairs: newMaxPairs ? parseInt(newMaxPairs) : null
+            }),
         });
 
         if (res.ok) {
             setNewRoundName('');
             setNewRoundSlug('');
+            setNewMaxPairs('');
             setCreateMsg('Ronda Creada!');
             mutate();
             setTimeout(() => setCreateMsg(''), 3000);
@@ -120,6 +126,15 @@ export default function AdminDashboard() {
                             required
                         />
                     </div>
+                    <div className="input-group">
+                        <input
+                            type="number"
+                            placeholder="Límite de parejas (Opcional)"
+                            value={newMaxPairs}
+                            onChange={(e) => setNewMaxPairs(e.target.value)}
+                            min="1"
+                        />
+                    </div>
                     <button type="submit" className="submit-btn">Crear</button>
                 </form>
                 {createMsg && <p style={{ color: 'var(--color-accent)' }}>{createMsg}</p>}
@@ -148,7 +163,7 @@ export default function AdminDashboard() {
                                             /{r.slug}
                                         </a>
                                     </td>
-                                    <td style={{ display: 'flex', gap: '8px' }}>
+                                    <td style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                         <button
                                             onClick={() => clearRound(r.slug)}
                                             style={{
@@ -176,6 +191,7 @@ export default function AdminDashboard() {
                                         >
                                             Eliminar
                                         </button>
+                                        <RoundMatches slug={r.slug} />
                                     </td>
                                 </tr>
                             ))}
@@ -183,6 +199,112 @@ export default function AdminDashboard() {
                     </table>
                 </div>
             </section>
+        </div>
+    );
+}
+
+function RoundMatches({ slug }: { slug: string }) {
+    const { data: matches, mutate } = useSWR(`/api/rounds/${slug}/matches`, fetcher);
+
+    const generateMatches = async () => {
+        if (!confirm('Generar partidos bloqueará la lista. ¿Continuar?')) return;
+        const res = await fetch(`/api/rounds/${slug}/matches`, { method: 'POST' });
+        if (res.ok) mutate();
+        else alert('Error generating matches');
+    };
+
+    const updateScore = async (id: number, score1: number, score2: number) => {
+        const res = await fetch(`/api/matches/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ score1, score2 })
+        });
+        if (res.ok) mutate();
+    };
+
+    if (!matches || matches.error) {
+        // Potentially not enough players or error
+        return (
+            <button
+                onClick={generateMatches}
+                style={{
+                    background: 'var(--color-primary)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                }}
+            >
+                Generar Partidos
+            </button>
+        );
+    }
+
+    if (matches.length === 0) {
+        return (
+            <button
+                onClick={generateMatches}
+                style={{
+                    background: 'var(--color-primary)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                }}
+            >
+                Generar Partidos
+            </button>
+        );
+    }
+
+    // Group matches by round
+    const matchesByRound = matches && !matches.error ? matches.reduce((acc: any, m: any) => {
+        const r = m.match_round || 1;
+        if (!acc[r]) acc[r] = [];
+        acc[r].push(m);
+        return acc;
+    }, {}) : {};
+
+    return (
+        <div style={{ width: '100%', marginTop: '10px', minWidth: '300px' }}>
+            <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Partidos:</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {Object.keys(matchesByRound).sort((a, b) => Number(a) - Number(b)).map((roundNum) => (
+                    <div key={roundNum}>
+                        <div style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            color: 'var(--color-primary)',
+                            marginBottom: '5px',
+                            borderBottom: '1px solid var(--color-surface-hover)',
+                            paddingBottom: '2px'
+                        }}>
+                            Ronda {roundNum}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {matchesByRound[roundNum].map((m: any) => (
+                                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem' }}>
+                                    <span style={{ color: 'var(--color-text-dim)', flex: 1 }}>{m.p1_p1}/{m.p1_p2} vs {m.p2_p1}/{m.p2_p2}</span>
+                                    <input
+                                        type="number"
+                                        value={m.score1}
+                                        onChange={(e) => updateScore(m.id, parseInt(e.target.value) || 0, m.score2)}
+                                        style={{ width: '40px', padding: '2px', background: '#334155', border: 'none', color: 'white', borderRadius: '4px' }}
+                                    />
+                                    <span>-</span>
+                                    <input
+                                        type="number"
+                                        value={m.score2}
+                                        onChange={(e) => updateScore(m.id, m.score1, parseInt(e.target.value) || 0)}
+                                        style={{ width: '40px', padding: '2px', background: '#334155', border: 'none', color: 'white', borderRadius: '4px' }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }

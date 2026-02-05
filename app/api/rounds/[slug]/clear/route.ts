@@ -9,9 +9,14 @@ export async function POST(
     const { slug } = await params;
 
     try {
-        await ensureSchema();
+        // Use a transaction if possible, or sequential deletes
+        // Delete matches first
+        await db.execute({
+            sql: 'DELETE FROM matches WHERE round_slug = ?',
+            args: [slug],
+        });
 
-        // Delete all players associated with this round slug
+        // Delete players next
         await db.execute({
             sql: 'DELETE FROM players WHERE round_slug = ?',
             args: [slug],

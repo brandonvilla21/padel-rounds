@@ -40,6 +40,24 @@ export async function POST(request: Request) {
         // If slug is provided, check existence?
         // Let's assume slug comes from a valid page.
 
+        if (slug) {
+            // Enforce Max Pairs Limit
+            const roundRes = await db.execute({
+                sql: 'SELECT max_pairs, (SELECT COUNT(*) FROM players WHERE round_slug = ?) as current_count FROM rounds WHERE slug = ?',
+                args: [slug, slug]
+            });
+
+            const roundData = roundRes.rows[0];
+            if (roundData) {
+                const maxPairs = roundData.max_pairs as number | null;
+                const currentCount = roundData.current_count as number;
+
+                if (maxPairs !== null && currentCount >= maxPairs) {
+                    return NextResponse.json({ error: 'Ronda llena / Round is full' }, { status: 400 });
+                }
+            }
+        }
+
         const result = await db.execute({
             sql: 'INSERT INTO players (player1, player2, round_slug) VALUES (?, ?, ?)',
             args: [player1, player2, slug || null], // Handle legacy global players as null slug

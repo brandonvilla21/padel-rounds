@@ -15,6 +15,7 @@ export async function ensureSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       slug TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
+      max_pairs INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -31,17 +32,47 @@ export async function ensureSchema() {
     )
   `);
 
-  // Migration: Add round_slug column if it doesn't exist (for existing databases)
+  // Create matches table
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS matches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      round_slug TEXT NOT NULL,
+      pair1_id INTEGER NOT NULL,
+      pair2_id INTEGER NOT NULL,
+      score1 INTEGER DEFAULT 0,
+      score2 INTEGER DEFAULT 0,
+      played BOOLEAN DEFAULT 0,
+      match_round INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(round_slug) REFERENCES rounds(slug),
+      FOREIGN KEY(pair1_id) REFERENCES players(id),
+      FOREIGN KEY(pair2_id) REFERENCES players(id)
+    )
+  `);
+
+  // Migration: Add columns if they don't exist
   try {
     const tableInfo = await db.execute("PRAGMA table_info(players)");
     const hasRoundSlug = tableInfo.rows.some(row => row.name === 'round_slug');
 
     if (!hasRoundSlug) {
       await db.execute("ALTER TABLE players ADD COLUMN round_slug TEXT");
-      // Optional: Assign existing players to a default round if needed, or leave null
+    }
+
+    const roundsInfo = await db.execute("PRAGMA table_info(rounds)");
+    const hasMaxPairs = roundsInfo.rows.some(row => row.name === 'max_pairs');
+
+    if (!hasMaxPairs) {
+      await db.execute("ALTER TABLE rounds ADD COLUMN max_pairs INTEGER");
+    }
+
+    const matchesInfo = await db.execute("PRAGMA table_info(matches)");
+    const hasMatchRound = matchesInfo.rows.some(row => row.name === 'match_round');
+
+    if (!hasMatchRound) {
+      await db.execute("ALTER TABLE matches ADD COLUMN match_round INTEGER DEFAULT 1");
     }
   } catch (e) {
-    // Ignore error if column already exists or other safe failures
     console.log("Schema check/migration note:", e);
   }
 }

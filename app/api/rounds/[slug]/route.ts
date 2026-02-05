@@ -11,6 +11,12 @@ export async function DELETE(
         await ensureSchema();
 
         // Use a transaction if possible, or sequential deletes
+        // Delete matches first
+        await db.execute({
+            sql: 'DELETE FROM matches WHERE round_slug = ?',
+            args: [slug],
+        });
+
         // Delete players first (Foreign Key might cascade but better to be explicit or if cascading is not set)
         await db.execute({
             sql: 'DELETE FROM players WHERE round_slug = ?',

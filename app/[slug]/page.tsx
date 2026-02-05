@@ -27,5 +27,5 @@ export default async function RoundPage({ params }: { params: Promise<{ slug: st
         );
     }
 
-    return <PadelBoard slug={slug} roundName={round.name as string} />;
+    return <PadelBoard slug={slug} roundName={round.name as string} maxPairs={round.max_pairs as number | null} />;
 }
