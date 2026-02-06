@@ -58,9 +58,12 @@ export async function POST(request: Request) {
         const maxPairs = roundData.max_pairs as number | null;
         const currentCount = roundData.current_count as number;
 
+        /* 
+        // Allow waitlist registration - removed blocking check
         if (maxPairs !== null && currentCount >= maxPairs) {
             return NextResponse.json({ error: 'Ronda llena / Round is full' }, { status: 400 });
         }
+        */
 
         const result = await db.execute({
             sql: 'INSERT INTO players (player1, player2, round_slug) VALUES (?, ?, ?)',

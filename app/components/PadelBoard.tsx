@@ -117,18 +117,23 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
 
             {maxPairs && (
                 <div style={{ textAlign: 'center', marginBottom: '20px', color: 'var(--color-primary)', fontWeight: 'bold' }}>
-                    Capacidad: {players?.length || 0} / {maxPairs}
+                    Capacidad: {players ? Math.min(players.length, maxPairs) : 0} / {maxPairs}
+                    {players && players.length > maxPairs && (
+                        <span style={{ marginLeft: '10px', color: '#fca5a5' }}>
+                            (+{players.length - maxPairs} en espera)
+                        </span>
+                    )}
                 </div>
             )}
 
-            <form className="player-form" onSubmit={handleSubmit} style={{ opacity: isFull ? 0.5 : 1, pointerEvents: isFull ? 'none' : 'auto' }}>
+            <form className="player-form" onSubmit={handleSubmit} style={{ opacity: 1, pointerEvents: 'auto' }}>
                 <div className="input-group">
                     <input
                         type="text"
                         placeholder="Nombre Jugador 1"
                         value={player1}
                         onChange={(e) => setPlayer1(e.target.value)}
-                        disabled={isSubmitting || isFull}
+                        disabled={isSubmitting}
                         required
                     />
                 </div>
@@ -143,7 +148,7 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
                     />
                 </div>
                 <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                    {isFull ? 'Ronda Llena' : isSubmitting ? 'Agregando...' : 'Unirse a la Lista'}
+                    {isSubmitting ? 'Agregando...' : isFull ? 'Unirse a Lista de Espera' : 'Unirse a la Lista'}
                 </button>
             </form>
 
@@ -177,7 +182,7 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
                                 <td colSpan={isOwner ? 4 : 3} className="empty-state">No hay jugadores en lista. ¡Sé el primero!</td>
                             </tr>
                         ) : (
-                            players.map((match, index) => (
+                            players.slice(0, maxPairs || players.length).map((match, index) => (
                                 <tr key={match.id}>
                                     <td className="rank-cell">{index + 1}</td>
                                     <td>{match.player1}</td>
@@ -207,6 +212,57 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
                     </tbody>
                 </table>
             </div>
+
+            {/* Waiting List Section */}
+            {players && maxPairs && players.length > maxPairs && (
+                <div style={{ marginTop: '30px' }}>
+                    <h3 style={{ color: '#fca5a5', marginBottom: '15px' }}>Lista de Espera ⏳</h3>
+                    <div className="table-wrapper" style={{ border: '1px solid rgba(252, 165, 165, 0.2)' }}>
+                        <table className="players-table">
+                            <thead>
+                                <tr>
+                                    <th>Orden</th>
+                                    <th>Pareja en Espera</th>
+                                    {isOwner && <th style={{ width: '50px' }}></th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {players.slice(maxPairs).map((match, index) => (
+                                    <tr key={match.id} style={{ background: 'rgba(252, 165, 165, 0.05)' }}>
+                                        <td style={{ color: '#fca5a5', fontWeight: 'bold' }}>{index + 1}</td>
+                                        <td>
+                                            <div>{match.player1}</div>
+                                            <div style={{ color: 'var(--color-primary)', fontSize: '0.9rem' }}>{match.player2}</div>
+                                        </td>
+                                        {isOwner && (
+                                            <td style={{ width: '50px', textAlign: 'center' }}>
+                                                <button
+                                                    onClick={() => handleDeletePlayer(match.id)}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        color: '#ef4444',
+                                                        fontSize: '1.1rem',
+                                                        padding: '4px',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                    title="Eliminar de espera"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p style={{ marginTop: '10px', fontSize: '0.9rem', color: 'var(--color-text-dim)', textAlign: 'center' }}>
+                        Si una pareja de la lista principal abandona, la primera pareja en espera entrará automáticamente.
+                    </p>
+                </div>
+            )}
 
             <MatchesSection slug={slug} isOwner={isOwner} />
         </div>

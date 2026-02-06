@@ -81,6 +81,22 @@ export async function POST(request: Request) {
         // Then GET for root returns ALL.
         // GET for subadmin returns user_id = ?.
 
+        // Enforce Round Limit for Subadmins
+        if (user.role !== 'root') {
+            const countRes = await db.execute({
+                sql: 'SELECT COUNT(*) as count FROM rounds WHERE user_id = ?',
+                args: [user.id]
+            });
+
+            const currentCount = countRes.rows[0].count as number;
+
+            if (currentCount >= 10) {
+                return NextResponse.json({
+                    error: 'Has alcanzado el límite de 10 rondas. Elimina una ronda antigua para crear una nueva.'
+                }, { status: 403 });
+            }
+        }
+
         const userIdToInsert = user.role === 'root' ? null : user.id;
 
         const result = await db.execute({
