@@ -7,8 +7,8 @@ export default function Home() {
     <div className="app-container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
       <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>Padel Rounds</h1>
       <p style={{ fontSize: '1.2rem', color: 'var(--color-text-dim)', marginBottom: '3rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
-        Organiza tus torneos de Padel Americano de forma sencilla.
         Crea rondas, genera partidos y lleva el marcador en tiempo real.
+        Gestiona la lista de espera por orden de llegada para que los jugadores aseguren su lugar.
       </p>
 
       <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>

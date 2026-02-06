@@ -63,6 +63,21 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
 
     const [copySuccess, setCopySuccess] = useState(false);
 
+    const handleDeletePlayer = async (id: number) => {
+        if (!confirm('¿Eliminar esta pareja?')) return;
+        try {
+            const res = await fetch(`/api/players/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                mutate();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Error al eliminar');
+            }
+        } catch (err) {
+            alert('Error de conexión');
+        }
+    };
+
     const handleCopyLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
@@ -149,16 +164,17 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
                             <th>#</th>
                             <th>Jugador 1</th>
                             <th>Jugador 2</th>
+                            {isOwner && <th style={{ width: '50px' }}></th>}
                         </tr>
                     </thead>
                     <tbody>
                         {!players ? (
                             <tr>
-                                <td colSpan={3} className="empty-state">Cargando datos...</td>
+                                <td colSpan={isOwner ? 4 : 3} className="empty-state">Cargando datos...</td>
                             </tr>
                         ) : players.length === 0 ? (
                             <tr>
-                                <td colSpan={3} className="empty-state">No hay jugadores en lista. ¡Sé el primero!</td>
+                                <td colSpan={isOwner ? 4 : 3} className="empty-state">No hay jugadores en lista. ¡Sé el primero!</td>
                             </tr>
                         ) : (
                             players.map((match, index) => (
@@ -166,6 +182,25 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
                                     <td className="rank-cell">{index + 1}</td>
                                     <td>{match.player1}</td>
                                     <td>{match.player2}</td>
+                                    {isOwner && (
+                                        <td style={{ width: '50px', textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => handleDeletePlayer(match.id)}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    color: '#ef4444',
+                                                    fontSize: '1.1rem',
+                                                    padding: '4px',
+                                                    borderRadius: '4px'
+                                                }}
+                                                title="Eliminar pareja"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    )}
                                 </tr>
                             ))
                         )}
