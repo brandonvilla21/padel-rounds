@@ -40,22 +40,26 @@ export async function POST(request: Request) {
         // If slug is provided, check existence?
         // Let's assume slug comes from a valid page.
 
-        if (slug) {
-            // Enforce Max Pairs Limit
-            const roundRes = await db.execute({
-                sql: 'SELECT max_pairs, (SELECT COUNT(*) FROM players WHERE round_slug = ?) as current_count FROM rounds WHERE slug = ?',
-                args: [slug, slug]
-            });
+        if (!slug) {
+            return NextResponse.json({ error: 'Round slug is required' }, { status: 400 });
+        }
 
-            const roundData = roundRes.rows[0];
-            if (roundData) {
-                const maxPairs = roundData.max_pairs as number | null;
-                const currentCount = roundData.current_count as number;
+        // Check availability and existence strictly
+        const roundRes = await db.execute({
+            sql: 'SELECT max_pairs, (SELECT COUNT(*) FROM players WHERE round_slug = ?) as current_count FROM rounds WHERE slug = ?',
+            args: [slug, slug]
+        });
 
-                if (maxPairs !== null && currentCount >= maxPairs) {
-                    return NextResponse.json({ error: 'Ronda llena / Round is full' }, { status: 400 });
-                }
-            }
+        const roundData = roundRes.rows[0];
+        if (!roundData) {
+            return NextResponse.json({ error: 'Ronda no encontrada / Round not found' }, { status: 404 });
+        }
+
+        const maxPairs = roundData.max_pairs as number | null;
+        const currentCount = roundData.current_count as number;
+
+        if (maxPairs !== null && currentCount >= maxPairs) {
+            return NextResponse.json({ error: 'Ronda llena / Round is full' }, { status: 400 });
         }
 
         const result = await db.execute({

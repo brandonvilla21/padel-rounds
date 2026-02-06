@@ -221,7 +221,12 @@ export default function AdminDashboard() {
             </section>
 
             {/* Root Admin: List Users */}
-            {user.role === 'root' && <UsersList />}
+            {user.role === 'root' && (
+                <>
+                    <UsersList />
+                    <MaintenanceSection />
+                </>
+            )}
         </div>
     );
 }
@@ -294,6 +299,49 @@ function UsersList() {
                         ))}
                     </tbody>
                 </table>
+            </div>
+        </section>
+    );
+}
+
+function MaintenanceSection() {
+    const handleCleanup = async () => {
+        if (!confirm('¿Ejecutar limpieza de base de datos? Esto eliminará jugadores huérfanos (que no pertenecen a ninguna ronda existente).')) return;
+
+        try {
+            const res = await fetch('/api/admin/cleanup', { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message);
+            } else {
+                alert(data.error);
+            }
+        } catch (e) {
+            alert('Error al ejecutar limpieza');
+        }
+    };
+
+    return (
+        <section style={{ marginTop: '50px', borderTop: '1px solid #334155', paddingTop: '30px', marginBottom: '50px' }}>
+            <h2 style={{ marginBottom: '20px', fontSize: '1.2rem', color: '#fca5a5' }}>Mantenimiento del Sistema</h2>
+            <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                <p style={{ marginBottom: '15px', color: 'var(--color-text-dim)' }}>
+                    Utilidad para eliminar datos basura (jugadores sin ronda asignada) que pueden haber quedado de versiones anteriores.
+                </p>
+                <button
+                    onClick={handleCleanup}
+                    style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px 20px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                    }}
+                >
+                    🧹 Limpiar Jugadores Huérfanos
+                </button>
             </div>
         </section>
     );
