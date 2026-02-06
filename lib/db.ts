@@ -9,14 +9,27 @@ export const db = createClient({
 });
 
 export async function ensureSchema() {
-  // Create rounds table
+  // Create users table
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT DEFAULT 'user',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Create rounds table with user_id
   await db.execute(`
     CREATE TABLE IF NOT EXISTS rounds (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       slug TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       max_pairs INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
 
@@ -61,9 +74,14 @@ export async function ensureSchema() {
 
     const roundsInfo = await db.execute("PRAGMA table_info(rounds)");
     const hasMaxPairs = roundsInfo.rows.some(row => row.name === 'max_pairs');
+    const hasUserId = roundsInfo.rows.some(row => row.name === 'user_id');
 
     if (!hasMaxPairs) {
       await db.execute("ALTER TABLE rounds ADD COLUMN max_pairs INTEGER");
+    }
+
+    if (!hasUserId) {
+      await db.execute("ALTER TABLE rounds ADD COLUMN user_id INTEGER");
     }
 
     const matchesInfo = await db.execute("PRAGMA table_info(matches)");

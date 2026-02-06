@@ -1,6 +1,7 @@
 import { db, ensureSchema } from '@/lib/db';
 import PadelBoard from '../components/PadelBoard';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 
 export default async function RoundPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
@@ -27,5 +28,29 @@ export default async function RoundPage({ params }: { params: Promise<{ slug: st
         );
     }
 
-    return <PadelBoard slug={slug} roundName={round.name as string} maxPairs={round.max_pairs as number | null} />;
+    // Check ownership
+    const cookieStore = await cookies();
+    const session = cookieStore.get('admin_session');
+    let isOwner = false;
+
+    if (session) {
+        try {
+            const user = JSON.parse(session.value);
+            if (user.role === 'root') {
+                isOwner = true;
+            } else if (round.user_id === user.id) {
+                isOwner = true;
+            }
+        } catch (e) {
+            // Legacy cookie check
+            if (session.value === 'true') isOwner = true;
+        }
+    }
+
+    return <PadelBoard
+        slug={slug}
+        roundName={round.name as string}
+        maxPairs={round.max_pairs as number | null}
+        isOwner={isOwner}
+    />;
 }

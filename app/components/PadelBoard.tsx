@@ -15,9 +15,10 @@ interface PadelBoardProps {
     slug?: string;
     roundName?: string;
     maxPairs?: number | null;
+    isOwner?: boolean;
 }
 
-export default function PadelBoard({ slug, roundName, maxPairs }: PadelBoardProps) {
+export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: PadelBoardProps) {
     const [player1, setPlayer1] = useState('');
     const [player2, setPlayer2] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,9 +61,44 @@ export default function PadelBoard({ slug, roundName, maxPairs }: PadelBoardProp
         }
     };
 
+    const [copySuccess, setCopySuccess] = useState(false);
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy!', err);
+        }
+    };
+
     return (
         <div className="app-container">
-            <h1>{roundName || 'Cola de Padel Rounds'}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <h1 style={{ margin: 0 }}>{roundName || 'Cola de Padel Rounds'}</h1>
+                <button
+                    onClick={handleCopyLink}
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid var(--color-primary)',
+                        color: 'var(--color-primary)',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: 'bold',
+                        transition: 'all 0.2s ease'
+                    }}
+                    title="Copiar enlace de esta ronda"
+                >
+                    <span>🔗</span>
+                    {copySuccess ? '¡Enlace Copiado!' : 'Copiar enlace'}
+                </button>
+            </div>
 
             {maxPairs && (
                 <div style={{ textAlign: 'center', marginBottom: '20px', color: 'var(--color-primary)', fontWeight: 'bold' }}>
@@ -137,16 +173,69 @@ export default function PadelBoard({ slug, roundName, maxPairs }: PadelBoardProp
                 </table>
             </div>
 
-            <MatchesSection slug={slug} />
+            <MatchesSection slug={slug} isOwner={isOwner} />
         </div>
     );
 }
 
-function MatchesSection({ slug }: { slug?: string }) {
+function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean }) {
     // Only fetch if slug exists
-    const { data: matches } = useSWR(slug ? `/api/rounds/${slug}/matches` : null, fetcher, { refreshInterval: 5000 });
+    const { data: matches, mutate } = useSWR(slug ? `/api/rounds/${slug}/matches` : null, fetcher, { refreshInterval: 5000 });
 
-    if (!matches || matches.error || matches.length === 0) return null;
+    const generateMatches = async () => {
+        if (!confirm('¿Generar partidos? Esto cerrará la lista de jugadores.')) return;
+        try {
+            const res = await fetch(`/api/rounds/${slug}/matches`, { method: 'POST' });
+            if (res.ok) {
+                mutate();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Error al generar partidos');
+            }
+        } catch (err) {
+            alert('Error de conexión');
+        }
+    };
+
+    const updateScore = async (id: number, score1: number, score2: number) => {
+        const res = await fetch(`/api/matches/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ score1, score2 })
+        });
+        if (res.ok) mutate();
+    };
+
+    if (!matches || matches.error) return null;
+
+    if (matches.length === 0) {
+        if (!isOwner) {
+            return (
+                <div style={{ marginTop: '40px', textAlign: 'center' }}>
+                    <h2 style={{ marginBottom: '20px' }}>Partidos</h2>
+                    <p style={{ marginBottom: '20px', color: 'var(--color-text-dim)' }}>
+                        Esperando que el organizador genere los partidos...
+                    </p>
+                </div>
+            );
+        }
+
+        return (
+            <div style={{ marginTop: '40px', textAlign: 'center' }}>
+                <h2 style={{ marginBottom: '20px' }}>Partidos</h2>
+                <p style={{ marginBottom: '20px', color: 'var(--color-text-dim)' }}>
+                    Aún no se han generado los partidos para esta ronda.
+                </p>
+                <button
+                    onClick={generateMatches}
+                    className="submit-btn"
+                    style={{ maxWidth: '200px', margin: '0 auto' }}
+                >
+                    Generar Partidos
+                </button>
+            </div>
+        );
+    }
 
     // Group matches by round
     const matchesByRound = matches.reduce((acc: any, m: any) => {
@@ -244,12 +333,52 @@ function MatchesSection({ slug }: { slug?: string }) {
                                             <div style={{ color: 'var(--color-primary)' }}>{m.p2_p2}</div>
                                         </td>
                                         <td>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                                                {m.score1} - {m.score2}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {isOwner ? (
+                                                    <>
+                                                        <input
+                                                            type="number"
+                                                            value={m.score1}
+                                                            onChange={(e) => updateScore(m.id, parseInt(e.target.value) || 0, m.score2)}
+                                                            style={{
+                                                                width: '50px',
+                                                                padding: '6px',
+                                                                background: 'rgba(255,255,255,0.05)',
+                                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                                color: 'white',
+                                                                borderRadius: '6px',
+                                                                textAlign: 'center',
+                                                                fontSize: '1.1rem',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        />
+                                                        <span style={{ fontWeight: 'bold', color: 'var(--color-text-dim)' }}>-</span>
+                                                        <input
+                                                            type="number"
+                                                            value={m.score2}
+                                                            onChange={(e) => updateScore(m.id, m.score1, parseInt(e.target.value) || 0)}
+                                                            style={{
+                                                                width: '50px',
+                                                                padding: '6px',
+                                                                background: 'rgba(255,255,255,0.05)',
+                                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                                color: 'white',
+                                                                borderRadius: '6px',
+                                                                textAlign: 'center',
+                                                                fontSize: '1.1rem',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                                        {m.score1} - {m.score2}
+                                                    </span>
+                                                )}
                                             </div>
                                             {m.played ?
-                                                <span style={{ fontSize: '0.8rem', color: '#10b981' }}>Finalizado</span> :
-                                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-dim)' }}>Pendiente</span>
+                                                <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>Finalizado</div> :
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: '4px' }}>Pendiente</div>
                                             }
                                         </td>
                                     </tr>

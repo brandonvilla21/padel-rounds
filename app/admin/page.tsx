@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
+import { useRouter } from 'next/navigation';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminDashboard() {
-    const [password, setPassword] = useState('');
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const router = useRouter();
+    const { data: userData, error: userError } = useSWR('/api/auth/me', fetcher);
+    const isAuthenticated = userData && userData.user;
 
     // Dashboard state
     const [newRoundName, setNewRoundName] = useState('');
@@ -17,17 +19,17 @@ export default function AdminDashboard() {
 
     const { data: rounds, mutate } = useSWR(isAuthenticated ? '/api/rounds' : null, fetcher);
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const res = await fetch('/api/auth', {
-            method: 'POST',
-            body: JSON.stringify({ password }),
-        });
-        if (res.ok) {
-            setIsAuthenticated(true);
-        } else {
-            alert('Contraseña Incorrecta');
+    useEffect(() => {
+        // If loaded and not authenticated, redirect to login
+        if (userData && !userData.user) {
+            router.push('/login');
         }
+    }, [userData, router]);
+
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        mutate(); // clear data
+        window.location.href = '/login'; // Force full reload to verify session clear if needed, or router.push
     };
 
     const createRound = async (e: React.FormEvent) => {
@@ -79,28 +81,24 @@ export default function AdminDashboard() {
         }
     };
 
-    if (!isAuthenticated) {
-        return (
-            <div className="app-container">
-                <h1>Acceso Admin</h1>
-                <form onSubmit={handleLogin} className="player-form" style={{ gridTemplateColumns: '1fr auto' }}>
-                    <div className="input-group">
-                        <input
-                            type="password"
-                            placeholder="Contraseña de Admin"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-                    <button type="submit" className="submit-btn" style={{ padding: '0 20px' }}>Entrar</button>
-                </form>
-            </div>
-        );
-    }
+    if (!userData) return <div className="app-container">Cargando...</div>;
+    if (!isAuthenticated) return null;
+
+    const user = userData.user;
 
     return (
         <div className="app-container" style={{ maxWidth: '1000px' }}>
-            <h1>Panel de Control</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1 style={{ margin: 0 }}>Panel de Control</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <span style={{ color: 'var(--color-primary)' }}>
+                        {user.role === 'root' ? '👑 Root Admin' : `👤 ${user.role === 'subadmin' ? 'Admin' : user.role} (ID: ${user.id})`}
+                    </span>
+                    <button onClick={handleLogout} style={{ background: 'none', border: '1px solid #334155', color: '#cbd5e1', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer' }}>
+                        Salir
+                    </button>
+                </div>
+            </div>
 
             {/* Create Round */}
             <section style={{ marginBottom: '40px' }}>
@@ -118,7 +116,7 @@ export default function AdminDashboard() {
                     <div className="input-group">
                         <input
                             type="text"
-                            placeholder="Slug Único (ej. cancha-1)"
+                            placeholder="URL Único (ej. cancha-1)"
                             value={newRoundSlug}
                             onChange={(e) => setNewRoundSlug(e.target.value.replace(/\s+/g, '-').toLowerCase())}
                             pattern="^[a-z0-9-]+$"
@@ -135,29 +133,46 @@ export default function AdminDashboard() {
                             min="1"
                         />
                     </div>
-                    <button type="submit" className="submit-btn">Crear</button>
+                    <button type="submit" className="submit-btn" style={{ background: 'var(--color-surface-hover)', border: '1px solid var(--color-primary)' }}>Crear</button>
                 </form>
                 {createMsg && <p style={{ color: 'var(--color-accent)' }}>{createMsg}</p>}
             </section>
 
             {/* List Rounds */}
             <section>
-                <h2 style={{ marginBottom: '20px', fontSize: '1.2rem', color: 'var(--color-primary)' }}>Rondas Activas</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2 style={{ fontSize: '1.2rem', color: 'var(--color-primary)', margin: 0 }}>
+                        {user.role === 'root' ? 'Todas las Rondas' : 'Tus Rondas Activas'}
+                    </h2>
+                </div>
+
                 <div className="table-wrapper">
                     <table className="players-table">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
+                                {user.role === 'root' && <th>Creador</th>}
                                 <th>Enlace</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {!rounds ? (
-                                <tr><td colSpan={3}>Cargando...</td></tr>
+                                <tr><td colSpan={user.role === 'root' ? 4 : 3}>Cargando...</td></tr>
+                            ) : rounds.length === 0 ? (
+                                <tr><td colSpan={user.role === 'root' ? 4 : 3} style={{ textAlign: 'center', color: 'var(--color-text-dim)' }}>No hay rondas.</td></tr>
                             ) : rounds.map((r: any) => (
                                 <tr key={r.id}>
                                     <td>{r.name}</td>
+                                    {user.role === 'root' && (
+                                        <td>
+                                            {r.creator_name ? (
+                                                <span style={{ color: '#fbbf24' }}>{r.creator_name}</span>
+                                            ) : (
+                                                <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Root/System</span>
+                                            )}
+                                        </td>
+                                    )}
                                     <td>
                                         <a href={`/${r.slug}`} target="_blank" style={{ color: 'var(--color-primary)' }}>
                                             /{r.slug}
@@ -191,7 +206,12 @@ export default function AdminDashboard() {
                                         >
                                             Eliminar
                                         </button>
-                                        <RoundMatches slug={r.slug} />
+                                        <a href={`/${r.slug}`} target="_blank" style={{
+                                            background: 'var(--color-surface)', border: '1px solid var(--color-surface-hover)',
+                                            padding: '6px 12px', borderRadius: '8px', textDecoration: 'none', color: 'white', fontSize: '0.9rem'
+                                        }}>
+                                            Ver
+                                        </a>
                                     </td>
                                 </tr>
                             ))}
@@ -199,163 +219,82 @@ export default function AdminDashboard() {
                     </table>
                 </div>
             </section>
+
+            {/* Root Admin: List Users */}
+            {user.role === 'root' && <UsersList />}
         </div>
     );
 }
 
-function RoundMatches({ slug }: { slug: string }) {
-    const { data: matches, mutate } = useSWR(`/api/rounds/${slug}/matches`, fetcher);
+function UsersList() {
+    const { data: users, mutate } = useSWR('/api/users', fetcher);
 
-    const generateMatches = async () => {
-        if (!confirm('Generar partidos bloqueará la lista. ¿Continuar?')) return;
-        const res = await fetch(`/api/rounds/${slug}/matches`, { method: 'POST' });
-        if (res.ok) mutate();
-        else alert('Error generating matches');
-    };
+    if (!users) return null;
 
-    const updateScore = async (id: number, score1: number, score2: number) => {
-        const res = await fetch(`/api/matches/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ score1, score2 })
-        });
-        if (res.ok) mutate();
-    };
+    const deleteUser = async (id: number, username: string) => {
+        if (!confirm(`PELIGRO CRÍTICO: ¿Estás seguro de eliminar al usuario "${username}"?\n\nESTO ELIMINARÁ TODAS LAS RONDAS, JUGADORES Y PARTIDOS CREADOS POR ESTE USUARIO.\n\nEsta acción no se puede deshacer.`)) return;
 
-    if (!matches || matches.error) {
-        // Potentially not enough players or error
-        return (
-            <button
-                onClick={generateMatches}
-                style={{
-                    background: 'var(--color-primary)',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer'
-                }}
-            >
-                Generar Partidos
-            </button>
-        );
-    }
-
-    if (matches.length === 0) {
-        return (
-            <button
-                onClick={generateMatches}
-                style={{
-                    background: 'var(--color-primary)',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer'
-                }}
-            >
-                Generar Partidos
-            </button>
-        );
-    }
-
-    // Group matches by round
-    const matchesByRound = matches && !matches.error ? matches.reduce((acc: any, m: any) => {
-        const r = m.match_round || 1;
-        if (!acc[r]) acc[r] = [];
-        acc[r].push(m);
-        return acc;
-    }, {}) : {};
-
-    // Calculate total score for each round to validate they are equal
-    const roundScores: Record<string, number> = {};
-    Object.keys(matchesByRound).forEach(r => {
-        roundScores[r] = matchesByRound[r].reduce((sum: number, m: any) => sum + (m.score1 || 0) + (m.score2 || 0), 0);
-    });
-
-    const uniqueScores = Array.from(new Set(Object.values(roundScores)));
-
-    // Enhanced Validation Logic
-    let showWarning = false;
-    let warningMessage = '';
-
-    if (uniqueScores.length > 1) {
-        showWarning = true;
-        const scores = Object.values(roundScores);
-        const frequency: Record<number, number> = {};
-        let maxFreq = 0;
-        let modeScore = scores[0];
-
-        scores.forEach(s => {
-            frequency[s] = (frequency[s] || 0) + 1;
-            if (frequency[s] > maxFreq) {
-                maxFreq = frequency[s];
-                modeScore = s;
+        try {
+            const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                mutate();
+                alert('Usuario eliminado correctamente.');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Error al eliminar usuario');
             }
-        });
-
-        const outlierRounds = Object.keys(roundScores).filter(r => roundScores[r] !== modeScore);
-
-        warningMessage = `Atención: La suma de juegos no es igual en todas las rondas. Parece que el número de juegos habitual es ${modeScore}, pero revisa la(s) ronda(s): ${outlierRounds.join(', ')}.`;
-    }
+        } catch (err) {
+            alert('Error de conexión');
+        }
+    };
 
     return (
-        <div style={{ width: '100%', marginTop: '10px', minWidth: '300px' }}>
-            <p style={{ marginBottom: '5px', fontWeight: 'bold' }}>Partidos:</p>
-
-            {showWarning && (
-                <div style={{
-                    backgroundColor: '#fff7ed',
-                    border: '1px solid #fed7aa',
-                    color: '#c2410c',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    marginBottom: '10px',
-                    fontSize: '0.9rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                }}>
-                    <span>⚠️</span>
-                    <strong>{warningMessage}</strong>
-                </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {Object.keys(matchesByRound).sort((a, b) => Number(a) - Number(b)).map((roundNum) => (
-                    <div key={roundNum}>
-                        <div style={{
-                            fontSize: '0.85rem',
-                            fontWeight: 'bold',
-                            color: 'var(--color-primary)',
-                            marginBottom: '5px',
-                            borderBottom: '1px solid var(--color-surface-hover)',
-                            paddingBottom: '2px'
-                        }}>
-                            Ronda {roundNum}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            {matchesByRound[roundNum].map((m: any) => (
-                                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.9rem' }}>
-                                    <span style={{ color: 'var(--color-text-dim)', flex: 1 }}>{m.p1_p1}/{m.p1_p2} vs {m.p2_p1}/{m.p2_p2}</span>
-                                    <input
-                                        type="number"
-                                        value={m.score1}
-                                        onChange={(e) => updateScore(m.id, parseInt(e.target.value) || 0, m.score2)}
-                                        style={{ width: '40px', padding: '2px', background: '#334155', border: 'none', color: 'white', borderRadius: '4px' }}
-                                    />
-                                    <span>-</span>
-                                    <input
-                                        type="number"
-                                        value={m.score2}
-                                        onChange={(e) => updateScore(m.id, m.score1, parseInt(e.target.value) || 0)}
-                                        style={{ width: '40px', padding: '2px', background: '#334155', border: 'none', color: 'white', borderRadius: '4px' }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
+        <section style={{ marginTop: '50px', borderTop: '1px solid #334155', paddingTop: '30px' }}>
+            <h2 style={{ marginBottom: '20px', fontSize: '1.2rem', color: 'var(--color-primary)' }}>Subadmins Registrados</h2>
+            <div className="table-wrapper">
+                <table className="players-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Fecha Registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.length === 0 ? (
+                            <tr><td colSpan={5}>No hay usuarios registrados.</td></tr>
+                        ) : users.map((u: any) => (
+                            <tr key={u.id}>
+                                <td>{u.id}</td>
+                                <td style={{ fontWeight: 'bold' }}>{u.username}</td>
+                                <td>{u.role === 'subadmin' ? 'Admin' : u.role}</td>
+                                <td style={{ color: 'var(--color-text-dim)' }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    {u.role !== 'root' && (
+                                        <button
+                                            onClick={() => deleteUser(u.id, u.username)}
+                                            style={{
+                                                background: 'rgba(239, 68, 68, 0.4)',
+                                                color: '#fff',
+                                                border: '1px solid #ef4444',
+                                                padding: '4px 8px',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontWeight: 600,
+                                                fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            Eliminar
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-        </div>
+        </section>
     );
 }

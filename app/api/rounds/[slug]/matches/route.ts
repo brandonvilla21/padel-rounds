@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db, ensureSchema } from '@/lib/db';
 
 export async function POST(
@@ -9,6 +10,42 @@ export async function POST(
 
     try {
         await ensureSchema();
+
+        // Auth Check
+        const cookieStore = await cookies();
+        const session = cookieStore.get('admin_session');
+        let user = null;
+        if (session) {
+            try {
+                user = JSON.parse(session.value);
+            } catch (e) {
+                if (session.value === 'true') user = { id: 'root', role: 'root' };
+            }
+        }
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Check Round Ownership
+        const roundRes = await db.execute({
+            sql: 'SELECT user_id FROM rounds WHERE slug = ?',
+            args: [slug]
+        });
+
+        if (roundRes.rows.length === 0) {
+            return NextResponse.json({ error: 'Round not found' }, { status: 404 });
+        }
+
+        const round = roundRes.rows[0];
+        if (user.role !== 'root') {
+            // If round has owner and it's not us (or round has no owner and we aren't root? assume old rounds are root owned or public?)
+            // If round.user_id is NULL, only root can edit? Or anyone?
+            // Safer: If round.user_id exists, must match. If null, assume root.
+            if (round.user_id !== user.id) {
+                return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            }
+        }
 
         // 1. Check if matches already exist
         const existingMatches = await db.execute({

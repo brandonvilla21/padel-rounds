@@ -1,10 +1,44 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { db, ensureSchema } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         await ensureSchema();
-        const result = await db.execute('SELECT * FROM rounds ORDER BY created_at DESC');
+        const cookieStore = await cookies();
+        const session = cookieStore.get('admin_session');
+
+        let user = null;
+        if (session) {
+            try {
+                user = JSON.parse(session.value);
+            } catch (e) {
+                if (session.value === 'true') user = { id: 'root', role: 'root' };
+            }
+        }
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        let query = `
+            SELECT r.*, u.username as creator_name 
+            FROM rounds r 
+            LEFT JOIN users u ON r.user_id = u.id 
+            ORDER BY r.created_at DESC
+        `;
+        let args: any[] = [];
+
+        if (user.role !== 'root') {
+            query = 'SELECT * FROM rounds WHERE user_id = ? ORDER BY created_at DESC';
+            args = [user.id];
+        }
+
+        const result = await db.execute({
+            sql: query,
+            args
+        });
+
         return NextResponse.json(result.rows);
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch rounds' }, { status: 500 });
@@ -14,6 +48,23 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         await ensureSchema();
+
+        const cookieStore = await cookies();
+        const session = cookieStore.get('admin_session');
+
+        let user = null;
+        if (session) {
+            try {
+                user = JSON.parse(session.value);
+            } catch (e) {
+                if (session.value === 'true') user = { id: 'root', role: 'root' };
+            }
+        }
+
+        if (!user) {
+            return NextResponse.json({ error: 'Must be logged in to create rounds' }, { status: 401 });
+        }
+
         const body = await request.json();
         const { name, slug, max_pairs } = body;
 
@@ -21,9 +72,20 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Name and Slug are required' }, { status: 400 });
         }
 
+        // Handle user_id (root might not have an ID, or we use a special one, or NULL for root-owned?)
+        // If query uses user_id=?, NULL won't match. 
+        // Logic: If root creates it, maybe assign to NULL or a specific ID?
+        // Let's assume root creates "system" rounds (user_id = NULL) or we treat root as just another user if we had a user entry.
+        // But "root" is virtual.
+        // Ideally, if user.role === 'root', user_id = NULL. 
+        // Then GET for root returns ALL.
+        // GET for subadmin returns user_id = ?.
+
+        const userIdToInsert = user.role === 'root' ? null : user.id;
+
         const result = await db.execute({
-            sql: 'INSERT INTO rounds (name, slug, max_pairs) VALUES (?, ?, ?)',
-            args: [name, slug, max_pairs || null],
+            sql: 'INSERT INTO rounds (name, slug, max_pairs, user_id) VALUES (?, ?, ?, ?)',
+            args: [name, slug, max_pairs || null, userIdToInsert],
         });
 
         return NextResponse.json({
@@ -34,7 +96,7 @@ export async function POST(request: Request) {
         }, { status: 201 });
     } catch (error: any) {
         if (error.message?.includes('UNIQUE constraint failed')) {
-            return NextResponse.json({ error: 'Slug already exists' }, { status: 409 });
+            return NextResponse.json({ error: 'Este nombre/URL ya existe' }, { status: 409 });
         }
         return NextResponse.json({ error: 'Failed to create round' }, { status: 500 });
     }
