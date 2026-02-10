@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { randomUUID } from 'crypto';
 import { db, ensureSchema } from '@/lib/db';
 
 export async function GET(request: Request) {
@@ -46,16 +47,23 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    let user: any = null;
+    let name, slug, max_pairs;
+
     try {
         await ensureSchema();
 
         const cookieStore = await cookies();
         const session = cookieStore.get('admin_session');
 
-        let user = null;
         if (session) {
             try {
-                user = JSON.parse(session.value);
+                const parsed = JSON.parse(session.value);
+                if (parsed === true) {
+                    user = { id: 'root', role: 'root' };
+                } else {
+                    user = parsed;
+                }
             } catch (e) {
                 if (session.value === 'true') user = { id: 'root', role: 'root' };
             }
@@ -66,10 +74,14 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { name, slug, max_pairs } = body;
+        ({ name, slug, max_pairs } = body);
 
-        if (!name || !slug) {
-            return NextResponse.json({ error: 'Name and Slug are required' }, { status: 400 });
+        if (!name) {
+            return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+        }
+
+        if (!slug) {
+            slug = randomUUID();
         }
 
         // Handle user_id (root might not have an ID, or we use a special one, or NULL for root-owned?)
@@ -97,11 +109,15 @@ export async function POST(request: Request) {
             }
         }
 
-        const userIdToInsert = user.role === 'root' ? null : user.id;
+        const userIdToInsert = user.role === 'root' ? null : (user.id || null);
+        const maxPairsToInsert = max_pairs || null;
+
+        const args = [name, slug, maxPairsToInsert, userIdToInsert];
+        console.log('Inserting round with args:', args);
 
         const result = await db.execute({
             sql: 'INSERT INTO rounds (name, slug, max_pairs, user_id) VALUES (?, ?, ?, ?)',
-            args: [name, slug, max_pairs || null, userIdToInsert],
+            args: args,
         });
 
         return NextResponse.json({
@@ -111,6 +127,7 @@ export async function POST(request: Request) {
             max_pairs
         }, { status: 201 });
     } catch (error: any) {
+        console.error('Error creating round:', error);
         if (error.message?.includes('UNIQUE constraint failed')) {
             return NextResponse.json({ error: 'Este nombre/URL ya existe' }, { status: 409 });
         }

@@ -13,7 +13,7 @@ export default function AdminDashboard() {
 
     // Dashboard state
     const [newRoundName, setNewRoundName] = useState('');
-    const [newRoundSlug, setNewRoundSlug] = useState('');
+    // const [newRoundSlug, setNewRoundSlug] = useState(''); // generated automatically
     const [newMaxPairs, setNewMaxPairs] = useState(''); // Empty string for no limit
     const [createMsg, setCreateMsg] = useState('');
 
@@ -34,20 +34,20 @@ export default function AdminDashboard() {
 
     const createRound = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newRoundSlug || !newRoundName) return;
+        if (!newRoundName) return;
 
         const res = await fetch('/api/rounds', {
             method: 'POST',
             body: JSON.stringify({
                 name: newRoundName,
-                slug: newRoundSlug,
+                // slug: newRoundSlug, // generated automatically backend
                 max_pairs: newMaxPairs ? parseInt(newMaxPairs) : null
             }),
         });
 
         if (res.ok) {
             setNewRoundName('');
-            setNewRoundSlug('');
+            // setNewRoundSlug('');
             setNewMaxPairs('');
             setCreateMsg('Ronda Creada!');
             mutate();
@@ -113,17 +113,7 @@ export default function AdminDashboard() {
                             required
                         />
                     </div>
-                    <div className="input-group">
-                        <input
-                            type="text"
-                            placeholder="URL Único (ej. cancha-1)"
-                            value={newRoundSlug}
-                            onChange={(e) => setNewRoundSlug(e.target.value.replace(/\s+/g, '-').toLowerCase())}
-                            pattern="^[a-z0-9-]+$"
-                            title="Solo letras minúsculas, números y guiones"
-                            required
-                        />
-                    </div>
+                    {/* Slug is auto-generated */}
                     <div className="input-group">
                         <input
                             type="number"
