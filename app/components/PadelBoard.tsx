@@ -355,7 +355,7 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
                 scale: 2, // Better quality
                 logging: false,
                 useCORS: true
-            });
+            } as any);
 
             // Use JPEG for better photo compatibility
             const image = canvas.toDataURL("image/jpeg", 0.9);

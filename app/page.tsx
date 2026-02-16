@@ -22,7 +22,7 @@ export default function Home() {
 
       <div style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid var(--color-surface-hover)' }}>
         <p style={{ color: 'var(--color-text-dim)' }}>
-          ¿Ya tienes una ronda activa? Accede directamente con su enlace (ej. /nombre-ronda).
+          ¿Ya tienes una ronda activa? Pregunta a tu administrador por el enlace.
         </p>
       </div>
     </div>
