@@ -1,6 +1,6 @@
 {
     "name": "Padel Rounds",
-    "short_name": "PadelQueue",
+    "short_name": "PadelRounds",
     "description": "Gestiona tus partidas y colas de Padel en tiempo real.",
     "start_url": "/",
     "display": "standalone",

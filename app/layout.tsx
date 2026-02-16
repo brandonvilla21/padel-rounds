@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Padel Rounds Queue',
-  description: 'Real-time Padel queue manager',
+  title: 'Padel Rounds',
+  description: 'Gestiona tus partidas de padel en tiempo real.',
 };
 
 export default function RootLayout({
