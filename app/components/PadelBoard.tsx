@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import useSWR from 'swr';
+import html2canvas from 'html2canvas';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -272,6 +273,7 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
 function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean }) {
     // Only fetch if slug exists
     const { data: matches, mutate } = useSWR(slug ? `/api/rounds/${slug}/matches` : null, fetcher, { refreshInterval: 5000 });
+    const [isSharing, setIsSharing] = useState(false);
 
     const generateMatches = async () => {
         if (!confirm('¿Generar partidos? Esto cerrará la lista de jugadores.')) return;
@@ -338,10 +340,88 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
 
 
 
+
+
+
+
+    const handleShareScore = async () => {
+        const element = document.getElementById('scoreboard-to-share');
+        if (!element) return;
+
+        setIsSharing(true);
+        try {
+            const canvas = await html2canvas(element, {
+                backgroundColor: '#0f172a', // Match app background
+                scale: 2, // Better quality
+                logging: false,
+                useCORS: true
+            });
+
+            // Use JPEG for better photo compatibility
+            const image = canvas.toDataURL("image/jpeg", 0.9);
+            const fileName = `padel-score-${Date.now()}.jpg`;
+
+            // Convert data URL to Blob
+            const res = await fetch(image);
+            const blob = await res.blob();
+            const file = new File([blob], fileName, { type: "image/jpeg" });
+
+            const shareData = {
+                files: [file],
+                title: 'Resultados',
+                text: '¡Mira los resultados de nuestra partida!'
+            };
+
+            if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback: Download
+                // Inform user if Web Share API is unavailable (e.g., non-HTTPS)
+                alert('La función de compartir nativa no está disponible (requiere HTTPS). Se descargará la imagen en su lugar.');
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = fileName;
+                link.click();
+            }
+        } catch (err) {
+            console.error('Error sharing score:', err);
+            alert('No se pudo compartir la imagen. Intenta de nuevo.');
+        } finally {
+            setIsSharing(false);
+        }
+    };
+
     return (
         <div style={{ marginTop: '40px' }}>
-            <h2>Tabla de Posiciones</h2>
-            <RankingTable matches={matches} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ margin: 0 }}>Tabla de Posiciones</h2>
+                <button
+                    onClick={handleShareScore}
+                    disabled={isSharing}
+                    style={{
+                        background: 'var(--color-primary)',
+                        color: 'black',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    }}
+                >
+                    {isSharing ? 'Generando...' : '📸 Compartir'}
+                </button>
+            </div>
+
+            <div id="scoreboard-to-share" style={{ padding: '20px', backgroundColor: '#0f172a', borderRadius: '10px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                    <h3 style={{ color: 'var(--color-primary)', margin: 0 }}>Resultados 🎾</h3>
+                </div>
+                <RankingTable matches={matches} />
+            </div>
 
             <h2 style={{ marginTop: '40px' }}>Partidos (Americano)</h2>
 

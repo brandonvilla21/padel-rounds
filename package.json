@@ -12,12 +12,14 @@
     "@libsql/client": "^0.17.0",
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.3",
+    "html2canvas": "^1.4.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "swr": "^2.4.0"
   },
   "devDependencies": {
+    "@types/html2canvas": "^0.5.35",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
