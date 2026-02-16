@@ -102,13 +102,13 @@ export default function RoundWizard({ onClose, onSuccess }: RoundWizardProps) {
                 {/* Step 1: Name */}
                 {step === 1 && (
                     <div>
-                        <h3 style={{ marginBottom: '20px', fontSize: '1.2rem' }}>¿Cómo se llamará esta ronda?</h3>
+                        <h3 style={{ marginBottom: '20px', fontSize: '1.2rem' }}>¿Cómo se llamará esta partida?</h3>
                         <p style={{ color: '#94a3b8', marginBottom: '20px' }}>Ejemplo: "Torneo Sábado", "Pista 1", "Cervezas Padel"</p>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="Nombre de la ronda"
+                            placeholder="Nombre de la partida"
                             style={{
                                 width: '100%',
                                 padding: '15px',
@@ -300,7 +300,7 @@ export default function RoundWizard({ onClose, onSuccess }: RoundWizardProps) {
                                 fontWeight: 'bold'
                             }}
                         >
-                            {isSubmitting ? 'Creando...' : 'Crear Ronda'}
+                            {isSubmitting ? 'Creando...' : 'Crear Partida'}
                         </button>
                     )}
                 </div>

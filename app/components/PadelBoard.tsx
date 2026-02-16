@@ -92,7 +92,7 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
     return (
         <div className="app-container">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                <h1 style={{ margin: 0 }}>{roundName || 'Cola de Padel Rounds'}</h1>
+                <h1 style={{ margin: 0 }}>{roundName || 'Cola de Partidas'}</h1>
                 <button
                     onClick={handleCopyLink}
                     style={{
@@ -109,7 +109,7 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
                         fontWeight: 'bold',
                         transition: 'all 0.2s ease'
                     }}
-                    title="Copiar enlace de esta ronda"
+                    title="Copiar enlace de esta partida"
                 >
                     <span>🔗</span>
                     {copySuccess ? '¡Enlace Copiado!' : 'Copiar enlace'}
@@ -159,7 +159,7 @@ export default function PadelBoard({ slug, roundName, maxPairs, isOwner }: Padel
 
             {isFull && (
                 <p style={{ color: 'var(--color-accent)', textAlign: 'center', marginBottom: '20px', fontWeight: 'bold' }}>
-                    ¡Esta ronda ha alcanzado su límite de jugadores!
+                    ¡Esta partida ha alcanzado su límite de jugadores!
                 </p>
             )}
 

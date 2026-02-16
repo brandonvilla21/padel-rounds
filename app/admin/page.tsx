@@ -111,7 +111,7 @@ export default function AdminDashboard() {
             <section>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h2 style={{ fontSize: '1.2rem', color: 'var(--color-primary)', margin: 0 }}>
-                        {user.role === 'root' ? 'Todas las Rondas' : 'Tus Rondas Activas'}
+                        {user.role === 'root' ? 'Todos los partidos' : 'Tus Partidos Activos'}
                     </h2>
                 </div>
 
