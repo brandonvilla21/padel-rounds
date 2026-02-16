@@ -1,0 +1,21 @@
+{
+    "name": "Padel Rounds",
+    "short_name": "PadelQueue",
+    "description": "Gestiona tus partidas y colas de Padel en tiempo real.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#fbbf24",
+    "icons": [
+        {
+            "src": "/icon",
+            "sizes": "any",
+            "type": "image/png"
+        },
+        {
+            "src": "/apple-icon",
+            "sizes": "any",
+            "type": "image/png"
+        }
+    ]
+}
