@@ -336,37 +336,7 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
         return acc;
     }, {});
 
-    // Calculate total score for each round to validate they are equal
-    const roundScores: Record<string, number> = {};
-    Object.keys(matchesByRound).forEach(r => {
-        roundScores[r] = matchesByRound[r].reduce((sum: number, m: any) => sum + (m.score1 || 0) + (m.score2 || 0), 0);
-    });
 
-    const uniqueScores = Array.from(new Set(Object.values(roundScores)));
-
-    // Enhanced Validation Logic
-    let showWarning = false;
-    let warningMessage = '';
-
-    if (uniqueScores.length > 1) {
-        showWarning = true;
-        const scores = Object.values(roundScores);
-        const frequency: Record<number, number> = {};
-        let maxFreq = 0;
-        let modeScore = scores[0]; // Default to first if tied
-
-        scores.forEach(s => {
-            frequency[s] = (frequency[s] || 0) + 1;
-            if (frequency[s] > maxFreq) {
-                maxFreq = frequency[s];
-                modeScore = s;
-            }
-        });
-
-        const outlierRounds = Object.keys(roundScores).filter(r => roundScores[r] !== modeScore);
-
-        warningMessage = `Atención: La suma de juegos no es igual en todas las rondas. Parece que el número de juegos habitual es ${modeScore}, pero revisa la(s) ronda(s): ${outlierRounds.join(', ')}.`;
-    }
 
     return (
         <div style={{ marginTop: '40px' }}>
@@ -375,22 +345,7 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
 
             <h2 style={{ marginTop: '40px' }}>Partidos (Americano)</h2>
 
-            {showWarning && (
-                <div style={{
-                    backgroundColor: '#fff7ed',
-                    border: '1px solid #fed7aa',
-                    color: '#c2410c',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <span>⚠️</span>
-                    <strong>{warningMessage}</strong>
-                </div>
-            )}
+
 
             {Object.keys(matchesByRound).sort((a, b) => Number(a) - Number(b)).map((roundNum) => (
                 <div key={roundNum} style={{ marginBottom: '30px' }}>
@@ -407,6 +362,7 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
                         <table className="players-table">
                             <thead>
                                 <tr>
+                                    <th>Cancha</th>
                                     <th>Pareja A</th>
                                     <th>Pareja B</th>
                                     <th>Resultado</th>
@@ -415,6 +371,9 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
                             <tbody>
                                 {matchesByRound[roundNum].map((m: any) => (
                                     <tr key={m.id}>
+                                        <td style={{ fontWeight: 'bold', color: 'var(--color-text-dim)', fontSize: '0.9rem' }}>
+                                            {m.court || '-'}
+                                        </td>
                                         <td>
                                             <div style={{ fontWeight: 'bold' }}>{m.p1_p1}</div>
                                             <div style={{ color: 'var(--color-primary)' }}>{m.p1_p2}</div>
@@ -430,6 +389,9 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
                                                         <input
                                                             type="number"
                                                             value={m.score1}
+                                                            inputMode="numeric"
+                                                            pattern="[0-9]*"
+                                                            onFocus={(e) => e.target.select()}
                                                             onChange={(e) => updateScore(m.id, parseInt(e.target.value) || 0, m.score2)}
                                                             style={{
                                                                 width: '50px',
@@ -447,6 +409,9 @@ function MatchesSection({ slug, isOwner }: { slug?: string, isOwner?: boolean })
                                                         <input
                                                             type="number"
                                                             value={m.score2}
+                                                            inputMode="numeric"
+                                                            pattern="[0-9]*"
+                                                            onFocus={(e) => e.target.select()}
                                                             onChange={(e) => updateScore(m.id, m.score1, parseInt(e.target.value) || 0)}
                                                             style={{
                                                                 width: '50px',
@@ -517,7 +482,12 @@ function RankingTable({ matches }: { matches: any[] }) {
         }
     });
 
-    const sortedRankings = Object.values(rankings).sort((a, b) => b.points - a.points);
+    const sortedRankings = Object.values(rankings).sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return b.wins - a.wins;
+    });
+
+    let currentRank = 1;
 
     return (
         <div className="table-wrapper" style={{ marginBottom: '20px', background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -534,22 +504,40 @@ function RankingTable({ matches }: { matches: any[] }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {sortedRankings.map((r, index) => (
-                        <tr key={index}>
-                            <td style={{ fontSize: '1.2rem', fontWeight: 'bold', color: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : 'inherit' }}>
-                                {index + 1}
-                            </td>
-                            <td>
-                                <div style={{ fontWeight: 'bold' }}>{r.p1}</div>
-                                <div style={{ color: 'var(--color-primary)' }}>{r.p2}</div>
-                            </td>
-                            <td style={{ textAlign: 'center', color: 'var(--color-text-dim)' }}>{r.matchesPlayed}</td>
-                            <td style={{ textAlign: 'center' }}>{r.wins}</td>
-                            <td style={{ textAlign: 'center' }}>{r.draws}</td>
-                            <td style={{ textAlign: 'center' }}>{r.losses}</td>
-                            <td style={{ textAlign: 'right', fontSize: '1.2rem', fontWeight: 'bold' }}>{r.points}</td>
-                        </tr>
-                    ))}
+                    {sortedRankings.map((r, index) => {
+                        // Calculate rank logic
+                        if (index > 0) {
+                            const prev = sortedRankings[index - 1];
+                            if (r.points !== prev.points || r.wins !== prev.wins) {
+                                currentRank = index + 1;
+                            }
+                        } else {
+                            currentRank = 1;
+                        }
+
+                        // Determine color based on rank (Gold, Silver, Bronze)
+                        let rankColor = 'inherit';
+                        if (currentRank === 1) rankColor = '#fbbf24';
+                        else if (currentRank === 2) rankColor = '#94a3b8';
+                        else if (currentRank === 3) rankColor = '#b45309';
+
+                        return (
+                            <tr key={index}>
+                                <td style={{ fontSize: '1.2rem', fontWeight: 'bold', color: rankColor }}>
+                                    {currentRank}
+                                </td>
+                                <td>
+                                    <div style={{ fontWeight: 'bold' }}>{r.p1}</div>
+                                    <div style={{ color: 'var(--color-primary)' }}>{r.p2}</div>
+                                </td>
+                                <td style={{ textAlign: 'center', color: 'var(--color-text-dim)' }}>{r.matchesPlayed}</td>
+                                <td style={{ textAlign: 'center' }}>{r.wins}</td>
+                                <td style={{ textAlign: 'center' }}>{r.draws}</td>
+                                <td style={{ textAlign: 'center' }}>{r.losses}</td>
+                                <td style={{ textAlign: 'right', fontSize: '1.2rem', fontWeight: 'bold' }}>{r.points}</td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
         </div>

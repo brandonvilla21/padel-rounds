@@ -75,6 +75,7 @@ export async function ensureSchema() {
     const roundsInfo = await db.execute("PRAGMA table_info(rounds)");
     const hasMaxPairs = roundsInfo.rows.some(row => row.name === 'max_pairs');
     const hasUserId = roundsInfo.rows.some(row => row.name === 'user_id');
+    const hasCourts = roundsInfo.rows.some(row => row.name === 'courts');
 
     if (!hasMaxPairs) {
       await db.execute("ALTER TABLE rounds ADD COLUMN max_pairs INTEGER");
@@ -84,11 +85,20 @@ export async function ensureSchema() {
       await db.execute("ALTER TABLE rounds ADD COLUMN user_id INTEGER");
     }
 
+    if (!hasCourts) {
+      await db.execute("ALTER TABLE rounds ADD COLUMN courts TEXT");
+    }
+
     const matchesInfo = await db.execute("PRAGMA table_info(matches)");
     const hasMatchRound = matchesInfo.rows.some(row => row.name === 'match_round');
+    const hasCourt = matchesInfo.rows.some(row => row.name === 'court');
 
     if (!hasMatchRound) {
       await db.execute("ALTER TABLE matches ADD COLUMN match_round INTEGER DEFAULT 1");
+    }
+
+    if (!hasCourt) {
+      await db.execute("ALTER TABLE matches ADD COLUMN court TEXT");
     }
   } catch (e) {
     console.log("Schema check/migration note:", e);

@@ -75,6 +75,7 @@ export async function POST(request: Request) {
 
         const body = await request.json();
         ({ name, slug, max_pairs } = body);
+        const courts = body.courts || null;
 
         if (!name) {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -112,11 +113,11 @@ export async function POST(request: Request) {
         const userIdToInsert = user.role === 'root' ? null : (user.id || null);
         const maxPairsToInsert = max_pairs || null;
 
-        const args = [name, slug, maxPairsToInsert, userIdToInsert];
+        const args = [name, slug, maxPairsToInsert, userIdToInsert, courts];
         console.log('Inserting round with args:', args);
 
         const result = await db.execute({
-            sql: 'INSERT INTO rounds (name, slug, max_pairs, user_id) VALUES (?, ?, ?, ?)',
+            sql: 'INSERT INTO rounds (name, slug, max_pairs, user_id, courts) VALUES (?, ?, ?, ?, ?)',
             args: args,
         });
 

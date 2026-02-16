@@ -29,7 +29,7 @@ export async function POST(
 
         // Check Round Ownership
         const roundRes = await db.execute({
-            sql: 'SELECT user_id FROM rounds WHERE slug = ?',
+            sql: 'SELECT user_id, courts FROM rounds WHERE slug = ?',
             args: [slug]
         });
 
@@ -46,6 +46,8 @@ export async function POST(
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
             }
         }
+
+        const courtList = round.courts ? (round.courts as string).split(',').map(c => c.trim()).filter(c => c) : [];
 
         // 1. Check if matches already exist
         const existingMatches = await db.execute({
@@ -83,16 +85,19 @@ export async function POST(
         const matchesPerRound = totalPlayers / 2;
 
         for (let round = 0; round < numRounds; round++) {
+            let courtIndex = 0;
             for (let match = 0; match < matchesPerRound; match++) {
                 const p1 = playerIds[match];
                 const p2 = playerIds[totalPlayers - 1 - match];
 
                 // If neither is a dummy "Bye" player, create the match
                 if (p1 !== -1 && p2 !== -1) {
+                    const assignedCourt = courtList.length > 0 ? courtList[courtIndex % courtList.length] : null;
                     matches.push({
-                        sql: 'INSERT INTO matches (round_slug, pair1_id, pair2_id, match_round) VALUES (?, ?, ?, ?)',
-                        args: [slug, p1, p2, round + 1]
+                        sql: 'INSERT INTO matches (round_slug, pair1_id, pair2_id, match_round, court) VALUES (?, ?, ?, ?, ?)',
+                        args: [slug, p1, p2, round + 1, assignedCourt]
                     });
+                    courtIndex++;
                 }
             }
 

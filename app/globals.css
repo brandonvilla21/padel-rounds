@@ -197,11 +197,47 @@ input::placeholder {
 }
 
 @media (max-width: 640px) {
+  body {
+    padding: 10px 5px;
+  }
+
+  .app-container {
+    padding: 15px;
+    border-radius: var(--radius-md);
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+  }
+
   .player-form {
     grid-template-columns: 1fr;
+    padding: 15px;
+    margin-bottom: 25px;
+  }
+
+  .input-group {
+    margin-bottom: 0;
+  }
+
+  input {
+    padding: 12px;
   }
 
   .submit-btn {
-    padding: 14px;
+    padding: 12px;
+    width: 100%;
+  }
+
+  .players-table th,
+  .players-table td {
+    padding: 10px 8px;
+    font-size: 0.9rem;
   }
 }

@@ -6,15 +6,15 @@ import { useRouter } from 'next/navigation';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+import RoundWizard from '../components/RoundWizard';
+
 export default function AdminDashboard() {
     const router = useRouter();
     const { data: userData, error: userError } = useSWR('/api/auth/me', fetcher);
     const isAuthenticated = userData && userData.user;
 
     // Dashboard state
-    const [newRoundName, setNewRoundName] = useState('');
-    // const [newRoundSlug, setNewRoundSlug] = useState(''); // generated automatically
-    const [newMaxPairs, setNewMaxPairs] = useState(''); // Empty string for no limit
+    const [showWizard, setShowWizard] = useState(false);
     const [createMsg, setCreateMsg] = useState('');
 
     const { data: rounds, mutate } = useSWR(isAuthenticated ? '/api/rounds' : null, fetcher);
@@ -32,30 +32,10 @@ export default function AdminDashboard() {
         window.location.href = '/login'; // Force full reload to verify session clear if needed, or router.push
     };
 
-    const createRound = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newRoundName) return;
-
-        const res = await fetch('/api/rounds', {
-            method: 'POST',
-            body: JSON.stringify({
-                name: newRoundName,
-                // slug: newRoundSlug, // generated automatically backend
-                max_pairs: newMaxPairs ? parseInt(newMaxPairs) : null
-            }),
-        });
-
-        if (res.ok) {
-            setNewRoundName('');
-            // setNewRoundSlug('');
-            setNewMaxPairs('');
-            setCreateMsg('Ronda Creada!');
-            mutate();
-            setTimeout(() => setCreateMsg(''), 3000);
-        } else {
-            const data = await res.json();
-            setCreateMsg(data.error);
-        }
+    const handleWizardSuccess = () => {
+        mutate();
+        setCreateMsg('¡Ronda creada con éxito!');
+        setTimeout(() => setCreateMsg(''), 3000);
     };
 
     const clearRound = async (slug: string) => {
@@ -100,33 +80,32 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Create Round */}
-            <section style={{ marginBottom: '40px' }}>
-                <h2 style={{ marginBottom: '20px', fontSize: '1.2rem', color: 'var(--color-primary)' }}>Crear Nueva Ronda</h2>
-                <form onSubmit={createRound} className="player-form">
-                    <div className="input-group">
-                        <input
-                            type="text"
-                            placeholder="Nombre de Ronda (ej. Cancha 1)"
-                            value={newRoundName}
-                            onChange={(e) => setNewRoundName(e.target.value)}
-                            required
-                        />
-                    </div>
-                    {/* Slug is auto-generated */}
-                    <div className="input-group">
-                        <input
-                            type="number"
-                            placeholder="Límite de parejas (Opcional)"
-                            value={newMaxPairs}
-                            onChange={(e) => setNewMaxPairs(e.target.value)}
-                            min="1"
-                        />
-                    </div>
-                    <button type="submit" className="submit-btn" style={{ background: 'var(--color-surface-hover)', border: '1px solid var(--color-primary)' }}>Crear</button>
-                </form>
-                {createMsg && <p style={{ color: 'var(--color-accent)' }}>{createMsg}</p>}
+            {/* Create Round Button */}
+            <section style={{ marginBottom: '40px', textAlign: 'center' }}>
+                <button
+                    onClick={() => setShowWizard(true)}
+                    className="submit-btn"
+                    style={{
+                        fontSize: '1.2rem',
+                        padding: '15px 40px',
+                        background: 'linear-gradient(135deg, var(--color-primary) 0%, #d97706 100%)',
+                        color: 'black',
+                        fontWeight: 'bold',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}
+                >
+                    🚀 Comenzar partida
+                </button>
+                {createMsg && <p style={{ color: '#10b981', marginTop: '10px' }}>{createMsg}</p>}
             </section>
+
+            {/* Wizard Modal */}
+            {showWizard && (
+                <RoundWizard
+                    onClose={() => setShowWizard(false)}
+                    onSuccess={handleWizardSuccess}
+                />
+            )}
 
             {/* List Rounds */}
             <section>
