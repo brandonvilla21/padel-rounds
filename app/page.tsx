@@ -20,6 +20,35 @@ export default function Home() {
         </Link>
       </div>
 
+      <div style={{ marginTop: '20px' }}>
+        <a
+          href="https://youtube.com/shorts/Ua0yXA2HdP8?feature=shared"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            textDecoration: 'none',
+            fontSize: '0.9rem',
+            color: 'var(--color-text-dim)',
+            border: '1px solid var(--color-surface-hover)',
+            padding: '10px 20px',
+            borderRadius: '20px',
+            transition: 'all 0.2s',
+            display: 'inline-block',
+            background: 'rgba(255, 255, 255, 0.05)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+            e.currentTarget.style.color = 'var(--color-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-surface-hover)';
+            e.currentTarget.style.color = 'var(--color-text-dim)';
+          }}
+        >
+          Ver Tutorial 📺
+        </a>
+      </div>
+
       <div style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid var(--color-surface-hover)' }}>
         <p style={{ color: 'var(--color-text-dim)' }}>
           ¿Ya tienes una ronda activa? Pregunta a tu administrador por el enlace.
